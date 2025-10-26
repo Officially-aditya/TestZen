@@ -6,6 +6,8 @@ export interface Session {
   endTime?: Date;
   completed: boolean;
   xpEarned: number;
+  reflectionCID?: string;
+  reflectionHash?: string;
 }
 
 export type SessionMode = 'meditation' | 'focus' | 'breathwork';
