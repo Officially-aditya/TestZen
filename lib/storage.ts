@@ -15,6 +15,17 @@ export const getDefaultUserStats = (): UserStats => ({
     plants: [],
     lastWatered: new Date(),
     growthLevel: 0,
+    tiles: Array.from({ length: 9 }, (_, i) => ({
+      id: i,
+      completed: false,
+    })),
+  },
+  nftStatus: {
+    eligible: false,
+    minted: false,
+  },
+  walletConnection: {
+    connected: false,
   },
 });
 
@@ -145,4 +156,39 @@ export const checkForNewBadges = (stats: UserStats): Badge[] => {
   });
   
   return newBadges;
+};
+
+export const updateGardenTiles = (stats: UserStats): UserStats => {
+  const completedTiles = Math.floor(stats.sessionsCompleted / 3);
+  const tiles = stats.gardenState.tiles.map((tile, index) => {
+    if (index < completedTiles) {
+      return { ...tile, completed: true };
+    }
+    return tile;
+  });
+  
+  return {
+    ...stats,
+    gardenState: {
+      ...stats.gardenState,
+      tiles,
+    },
+  };
+};
+
+export const checkNFTEligibility = (stats: UserStats): boolean => {
+  const allTilesCompleted = stats.gardenState.tiles.every(tile => tile.completed);
+  return allTilesCompleted && stats.sessionsCompleted >= 9;
+};
+
+export const updateNFTStatus = (stats: UserStats): UserStats => {
+  const eligible = checkNFTEligibility(stats);
+  return {
+    ...stats,
+    nftStatus: {
+      ...stats.nftStatus,
+      eligible,
+      minted: stats.nftStatus?.minted || false,
+    },
+  };
 };

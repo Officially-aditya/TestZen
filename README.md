@@ -8,7 +8,11 @@ A calming meditation and focus session tracker with XP rewards, badge collection
 - ⏱️ **Flexible Durations**: Choose from 5 to 60 minutes
 - 🎯 **XP & Leveling System**: Earn experience points and level up
 - 🏆 **Badge Collection**: Unlock achievements as you progress
-- 🌱 **Mindfulness Garden**: Watch your garden grow with each session
+- 🌱 **Mindfulness Garden**: Watch your garden grow with each session (3×3 tile grid)
+- 🖼️ **NFT Badge Minting**: Mint your achievement as an NFT badge when garden is complete
+- 👛 **Wallet Connection**: Connect your wallet for on-chain features
+- 📊 **Advanced Dashboard**: Track XP progress, garden tiles, and NFT status
+- 📅 **Session History**: View recent sessions with detailed metrics
 - ✨ **Smooth Animations**: Gentle transitions with Framer Motion
 - 📱 **Fully Responsive**: Mobile-first design that works on all devices
 - ♿ **Accessible**: WCAG compliant with focus indicators and ARIA labels
@@ -68,11 +72,20 @@ yarn dev
 
 ### Dashboard Overview
 
-The dashboard displays:
+The app has two main views:
 
+**Home Page** (`/`):
 - **Stats Cards**: Level, Total XP, Total Minutes, and Sessions Completed
 - **Mindfulness Garden**: Visual representation of your progress
 - **Badge Collection**: All available badges (locked and unlocked)
+
+**Advanced Dashboard** (`/dashboard`):
+- **Wallet Connection**: Connect your wallet for NFT features
+- **XP Progress Bar**: Detailed view of XP and progress to next level
+- **Garden Grid**: 3×3 tile grid showing session completion (1 tile per 3 sessions)
+- **NFT Badge Status**: View mint eligibility and mint your achievement badge
+- **Recent Sessions**: Timeline of your last 5 completed sessions
+- **Session Analytics**: Duration, XP earned, and timestamps
 
 ### Earning XP and Badges
 
@@ -88,6 +101,22 @@ The dashboard displays:
 - ⏱️ **Centurion** (Rare): Meditate for 100 minutes
 - ⭐ **Rising Star** (Rare): Reach level 5
 - 🧘 **Zen Master** (Epic): Reach level 10
+
+### NFT Badge System
+
+Complete all 9 tiles in your mindfulness garden (27 total sessions) to become eligible to mint an NFT badge:
+
+1. **Complete Sessions**: Each session contributes to your garden progress
+2. **Fill Garden Grid**: Complete all 9 tiles (3 sessions per tile = 27 sessions)
+3. **Connect Wallet**: Link your wallet to enable minting
+4. **Mint NFT**: Mint your "Zen Garden Master" achievement badge
+5. **View On-Chain**: Your badge includes metadata with your stats and achievements
+
+The NFT badge includes:
+- Unique token ID
+- Level and XP metadata
+- Total sessions completed
+- Legendary rarity status
 
 ## Design System
 
@@ -147,12 +176,25 @@ Users with motion sensitivity can enable "Reduce Motion" in their system prefere
 ```
 /
 ├── app/
+│   ├── api/
+│   │   ├── garden/
+│   │   │   └── route.ts    # Garden API endpoint
+│   │   └── nft/
+│   │       └── mint/
+│   │           └── route.ts # NFT minting API
+│   ├── dashboard/
+│   │   └── page.tsx        # Advanced dashboard page
+│   ├── session/
+│   │   └── page.tsx        # Session page
 │   ├── layout.tsx          # Root layout with metadata
 │   ├── globals.css         # Global styles and Tailwind
-│   ├── page.tsx            # Dashboard page
-│   └── session/
-│       └── page.tsx        # Session page
+│   └── page.tsx            # Home page
 ├── components/
+│   ├── garden/
+│   │   ├── GardenGrid.tsx  # 3×3 garden tile grid
+│   │   └── XPBar.tsx       # XP progress bar
+│   ├── nft/
+│   │   └── NFTBadge.tsx    # NFT badge status and minting
 │   ├── Starfield.tsx       # Animated background canvas
 │   ├── ModeSelector.tsx    # Session mode selection
 │   ├── DurationSelector.tsx # Duration selection
@@ -162,6 +204,7 @@ Users with motion sensitivity can enable "Reduce Motion" in their system prefere
 │   ├── StatsCard.tsx       # Dashboard stat card
 │   ├── GardenVisualization.tsx # Garden display
 │   ├── BadgeGrid.tsx       # Badge collection grid
+│   ├── WalletConnect.tsx   # Wallet connection UI
 │   └── LoadingSkeleton.tsx # Loading states
 ├── lib/
 │   └── storage.ts          # LocalStorage utilities

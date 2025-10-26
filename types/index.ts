@@ -17,6 +17,8 @@ export interface UserStats {
   totalMinutes: number;
   badges: Badge[];
   gardenState: GardenState;
+  nftStatus?: NFTStatus;
+  walletConnection?: WalletConnection;
 }
 
 export interface Badge {
@@ -32,6 +34,7 @@ export interface GardenState {
   plants: Plant[];
   lastWatered: Date;
   growthLevel: number;
+  tiles: GardenTile[];
 }
 
 export interface Plant {
@@ -39,4 +42,34 @@ export interface Plant {
   type: string;
   growthStage: number;
   position: { x: number; y: number };
+}
+
+export interface GardenTile {
+  id: number;
+  completed: boolean;
+  sessionType?: SessionMode;
+  completedAt?: Date;
+}
+
+export interface NFTStatus {
+  eligible: boolean;
+  minted: boolean;
+  tokenId?: string;
+  tokenURI?: string;
+  mintedAt?: Date;
+  metadata?: {
+    name: string;
+    description: string;
+    image: string;
+    attributes: Array<{
+      trait_type: string;
+      value: string | number;
+    }>;
+  };
+}
+
+export interface WalletConnection {
+  connected: boolean;
+  address?: string;
+  chainId?: number;
 }

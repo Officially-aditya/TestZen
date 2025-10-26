@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Play, TrendingUp, Clock, Award, BarChart } from 'lucide-react';
+import { Play, TrendingUp, Clock, Award, BarChart, LayoutDashboard } from 'lucide-react';
 import Starfield from '@/components/Starfield';
 import StatsCard from '@/components/StatsCard';
 import GardenVisualization from '@/components/GardenVisualization';
@@ -97,16 +97,28 @@ export default function HomePage() {
                 Your mindful practice tracker
               </p>
             </div>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => router.push('/session')}
-              className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl bg-primary-500 text-white font-semibold shadow-soft-lg hover:bg-primary-600 transition-colors focus-ring text-base sm:text-lg"
-              aria-label="Start new session"
-            >
-              <Play className="w-5 h-5" />
-              <span>Start Session</span>
-            </motion.button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => router.push('/dashboard')}
+                className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl bg-white border-2 border-primary-500 text-primary-500 font-semibold shadow-soft hover:bg-primary-50 transition-colors focus-ring text-base sm:text-lg"
+                aria-label="View dashboard"
+              >
+                <LayoutDashboard className="w-5 h-5" />
+                <span>Dashboard</span>
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => router.push('/session')}
+                className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl bg-primary-500 text-white font-semibold shadow-soft-lg hover:bg-primary-600 transition-colors focus-ring text-base sm:text-lg"
+                aria-label="Start new session"
+              >
+                <Play className="w-5 h-5" />
+                <span>Start Session</span>
+              </motion.button>
+            </div>
           </div>
         </motion.header>
 

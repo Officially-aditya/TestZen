@@ -18,6 +18,8 @@ import {
   calculateXP,
   calculateLevel,
   checkForNewBadges,
+  updateGardenTiles,
+  updateNFTStatus,
 } from '@/lib/storage';
 
 type SessionState = 'setup' | 'active' | 'complete' | 'badges';
@@ -39,7 +41,7 @@ export default function SessionPage() {
     const newTotalXP = stats.totalXP + earnedXP;
     const newLevelValue = calculateLevel(newTotalXP);
 
-    const newStats = {
+    let newStats = {
       ...stats,
       totalXP: newTotalXP,
       level: newLevelValue,
@@ -55,6 +57,9 @@ export default function SessionPage() {
     if (badges.length > 0) {
       newStats.badges = [...stats.badges, ...badges];
     }
+
+    newStats = updateGardenTiles(newStats);
+    newStats = updateNFTStatus(newStats);
 
     saveUserStats(newStats);
 
