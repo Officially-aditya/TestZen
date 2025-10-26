@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import { Starfield } from '@/components/starfield'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -16,7 +17,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <Starfield 
+          density={200}
+          color="rgba(163, 163, 163, 1)"
+          baseSpeed={0.5}
+          hoverSpeedMultiplier={3}
+          glowIntensity={0.8}
+        />
+        {children}
+      </body>
     </html>
   )
 }
