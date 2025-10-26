@@ -104,19 +104,35 @@ The app has two main views:
 
 ### NFT Badge System
 
-Complete all 9 tiles in your mindfulness garden (27 total sessions) to become eligible to mint an NFT badge:
+Complete all 9 tiles in your mindfulness garden (27 total sessions) to become eligible to mint an NFT badge using **Hedera Token Service (HTS)**:
 
 1. **Complete Sessions**: Each session contributes to your garden progress
 2. **Fill Garden Grid**: Complete all 9 tiles (3 sessions per tile = 27 sessions)
-3. **Connect Wallet**: Link your wallet to enable minting
-4. **Mint NFT**: Mint your "Zen Garden Master" achievement badge
-5. **View On-Chain**: Your badge includes metadata with your stats and achievements
+3. **Connect Wallet**: Link your Hedera wallet to enable minting
+4. **Associate Token**: Associate the Serenity Badge token with your account (one-time, ~$0.05)
+5. **Mint NFT**: Mint your "Serenity Badge - Zen Garden Master" achievement
+6. **View On-Chain**: Your badge is stored on Hedera with metadata on IPFS
 
-The NFT badge includes:
-- Unique token ID
+**The NFT badge includes:**
+- Unique token ID and serial number
 - Level and XP metadata
 - Total sessions completed
+- Completion date and timestamp
+- Journey reflection hash (unique fingerprint)
 - Legendary rarity status
+- IPFS-hosted metadata
+
+**Technical Features:**
+- ✅ Idempotent minting (prevents duplicates)
+- ✅ Server-side signing for security
+- ✅ Graceful error handling and rollback
+- ✅ Metadata stored permanently on IPFS
+- ✅ Transaction verification on Hedera
+- ✅ Comprehensive test coverage
+
+For setup and configuration, see:
+- [NFT_MINTING_IMPLEMENTATION.md](./NFT_MINTING_IMPLEMENTATION.md) - Technical details
+- [HEDERA_SETUP.md](./HEDERA_SETUP.md) - Setup guide
 
 ## Design System
 
@@ -207,7 +223,12 @@ Users with motion sensitivity can enable "Reduce Motion" in their system prefere
 │   ├── WalletConnect.tsx   # Wallet connection UI
 │   └── LoadingSkeleton.tsx # Loading states
 ├── lib/
-│   └── storage.ts          # LocalStorage utilities
+│   ├── storage.ts          # LocalStorage utilities
+│   ├── hedera.ts           # Hedera Token Service integration
+│   ├── ipfs.ts             # IPFS metadata upload
+│   └── mongodb.ts          # MongoDB connection
+├── models/
+│   └── Garden.ts           # Garden document schema
 ├── types/
 │   └── index.ts            # TypeScript type definitions
 ├── public/                 # Static assets
@@ -225,6 +246,9 @@ Users with motion sensitivity can enable "Reduce Motion" in their system prefere
 - `npm start` - Start production server
 - `npm run lint` - Run ESLint
 - `npm run type-check` - Run TypeScript type checking
+- `npm test` - Run test suite
+- `npm run test:watch` - Run tests in watch mode
+- `npm run test:coverage` - Run tests with coverage report
 
 ### Code Style
 
@@ -255,7 +279,25 @@ npm start
 
 ### Environment Variables
 
-No environment variables required - the app uses client-side storage.
+For NFT minting functionality, configure the following environment variables:
+
+```bash
+# Copy example file
+cp .env.example .env
+```
+
+**Required for NFT Minting:**
+- `MONGODB_URI` - MongoDB connection string
+- `HEDERA_NETWORK` - testnet or mainnet
+- `HEDERA_OPERATOR_ID` - Your Hedera account ID
+- `HEDERA_OPERATOR_KEY` - Your Hedera private key
+- `HEDERA_NFT_TOKEN_ID` - NFT token/collection ID
+- `IPFS_HOST` - IPFS host
+- `IPFS_PORT` - IPFS port
+- `IPFS_PROTOCOL` - http or https
+- `IPFS_GATEWAY` - IPFS gateway URL
+
+See [HEDERA_SETUP.md](./HEDERA_SETUP.md) for detailed setup instructions.
 
 ## Browser Support
 
