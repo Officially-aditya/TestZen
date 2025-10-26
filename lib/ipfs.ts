@@ -14,6 +14,15 @@ export interface BadgeMetadata {
   reflectionHash?: string;
 }
 
+export interface EncryptedReflectionPayload {
+  ciphertext: string;
+  iv: string;
+  salt: string;
+  timestamp: string;
+  mode: string;
+  version: string;
+}
+
 export async function uploadMetadataToIPFS(
   metadata: BadgeMetadata
 ): Promise<string> {
@@ -80,4 +89,95 @@ export async function uploadImageToIPFS(imageBuffer: Buffer): Promise<string> {
 export function getIPFSUrl(cid: string): string {
   const gateway = process.env.IPFS_GATEWAY || 'https://ipfs.io/ipfs';
   return `${gateway}/${cid}`;
+}
+
+/**
+ * Upload encrypted reflection payload to Web3.storage
+ * @param payload - The encrypted reflection payload
+ * @returns CID of the uploaded content
+ */
+export async function uploadEncryptedReflectionToIPFS(
+  payload: EncryptedReflectionPayload
+): Promise<string> {
+  try {
+    const web3StorageToken = process.env.WEB3_STORAGE_TOKEN;
+    
+    if (!web3StorageToken) {
+      throw new Error('WEB3_STORAGE_TOKEN not configured');
+    }
+    
+    const payloadJSON = JSON.stringify(payload, null, 2);
+    const blob = new Blob([payloadJSON], { type: 'application/json' });
+    const file = new File([blob], 'reflection.json', { type: 'application/json' });
+    
+    // Create FormData for Web3.storage upload
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch('https://api.web3.storage/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${web3StorageToken}`,
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Web3.storage upload failed: ${response.statusText} - ${errorText}`);
+    }
+    
+    const result = await response.json();
+    
+    // Web3.storage returns the CID in the response
+    return result.cid;
+  } catch (error) {
+    console.error('Error uploading encrypted reflection to IPFS:', error);
+    throw new Error('Failed to upload encrypted reflection to IPFS');
+  }
+}
+
+/**
+ * Upload any JSON data to Web3.storage
+ * @param data - The JSON data to upload
+ * @param filename - Optional filename
+ * @returns CID of the uploaded content
+ */
+export async function uploadJSONToWeb3Storage(
+  data: Record<string, any>,
+  filename: string = 'data.json'
+): Promise<string> {
+  try {
+    const web3StorageToken = process.env.WEB3_STORAGE_TOKEN;
+    
+    if (!web3StorageToken) {
+      throw new Error('WEB3_STORAGE_TOKEN not configured');
+    }
+    
+    const dataJSON = JSON.stringify(data, null, 2);
+    const blob = new Blob([dataJSON], { type: 'application/json' });
+    const file = new File([blob], filename, { type: 'application/json' });
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch('https://api.web3.storage/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${web3StorageToken}`,
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Web3.storage upload failed: ${response.statusText} - ${errorText}`);
+    }
+    
+    const result = await response.json();
+    return result.cid;
+  } catch (error) {
+    console.error('Error uploading JSON to Web3.storage:', error);
+    throw new Error('Failed to upload JSON to Web3.storage');
+  }
 }

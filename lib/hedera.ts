@@ -6,6 +6,8 @@ import {
   TokenMintTransaction,
   TokenAssociateTransaction,
   TransferTransaction,
+  TopicMessageSubmitTransaction,
+  TopicId,
   Hbar,
   Status,
 } from '@hashgraph/sdk';
@@ -168,5 +170,80 @@ export async function associateToken(
   } catch (error) {
     console.error('Error associating token:', error);
     throw new Error(`Failed to associate token: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+export interface HCSMessageData {
+  sessionId: string;
+  userId: string;
+  mode: string;
+  duration: number;
+  xpEarned: number;
+  reflectionHash?: string;
+  reflectionCID?: string;
+  timestamp: string;
+}
+
+export interface HCSMessageResult {
+  transactionId: string;
+  topicId: string;
+  timestamp: Date;
+  sequenceNumber: number;
+}
+
+/**
+ * Submit a message to Hedera Consensus Service (HCS) topic
+ * @param topicId - The HCS topic ID
+ * @param messageData - The session data to submit
+ * @returns Transaction details
+ */
+export async function submitHCSMessage(
+  topicId: string,
+  messageData: HCSMessageData
+): Promise<HCSMessageResult> {
+  const client = getHederaClient();
+
+  if (!topicId) {
+    throw new Error('HCS topic ID not provided');
+  }
+
+  try {
+    // Convert message data to JSON string
+    const messageJSON = JSON.stringify(messageData);
+    const messageBytes = Buffer.from(messageJSON, 'utf-8');
+
+    // Submit message to topic
+    const submitTx = await new TopicMessageSubmitTransaction()
+      .setTopicId(TopicId.fromString(topicId))
+      .setMessage(messageBytes)
+      .execute(client);
+
+    const receipt = await submitTx.getReceipt(client);
+
+    if (receipt.status !== Status.Success) {
+      throw new Error(`HCS message submission failed with status: ${receipt.status}`);
+    }
+
+    return {
+      transactionId: submitTx.transactionId.toString(),
+      topicId,
+      timestamp: new Date(),
+      sequenceNumber: receipt.topicSequenceNumber?.toNumber() || 0,
+    };
+  } catch (error) {
+    console.error('Error submitting HCS message:', error);
+    throw new Error(`Failed to submit HCS message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Validate HCS topic ID format
+ */
+export function validateTopicId(topicId: string): boolean {
+  try {
+    TopicId.fromString(topicId);
+    return true;
+  } catch {
+    return false;
   }
 }

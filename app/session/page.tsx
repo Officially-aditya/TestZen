@@ -21,8 +21,9 @@ import {
   updateGardenTiles,
   updateNFTStatus,
 } from '@/lib/storage';
+import { encryptText } from '@/lib/encryption';
 
-type SessionState = 'setup' | 'active' | 'complete' | 'badges';
+type SessionState = 'setup' | 'active' | 'complete' | 'reflection' | 'badges';
 
 export default function SessionPage() {
   const router = useRouter();
@@ -32,6 +33,9 @@ export default function SessionPage() {
   const [xpGained, setXpGained] = useState(0);
   const [newLevel, setNewLevel] = useState<number>();
   const [newBadges, setNewBadges] = useState<Badge[]>([]);
+  const [reflection, setReflection] = useState('');
+  const [sessionStartTime, setSessionStartTime] = useState<Date>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleComplete = useCallback(() => {
     const stats = getUserStats();
@@ -67,7 +71,7 @@ export default function SessionPage() {
       id: Date.now().toString(),
       mode,
       duration,
-      startTime: new Date(Date.now() - duration * 60 * 1000),
+      startTime: sessionStartTime || new Date(Date.now() - duration * 60 * 1000),
       endTime: new Date(),
       completed: true,
       xpEarned: earnedXP,
@@ -77,12 +81,77 @@ export default function SessionPage() {
     setXpGained(earnedXP);
     setNewLevel(newLevelValue > oldLevel ? newLevelValue : undefined);
     setNewBadges(badges);
-    setSessionState('complete');
-  }, [duration, mode]);
+    setSessionState('reflection');
+  }, [duration, mode, sessionStartTime]);
 
   const handleCancel = useCallback(() => {
     router.push('/');
   }, [router]);
+
+  const handleBeginSession = useCallback(() => {
+    setSessionStartTime(new Date());
+    setSessionState('active');
+  }, []);
+
+  const handleSubmitReflection = useCallback(async () => {
+    setIsSubmitting(true);
+    try {
+      const stats = getUserStats();
+      
+      // Encrypt reflection if provided
+      let encryptedReflection;
+      if (reflection.trim()) {
+        // Use a base key from environment or a default for client-side encryption
+        // In production, this should be derived from user's wallet or stored securely
+        const baseKey = process.env.NEXT_PUBLIC_ENCRYPTION_BASE_KEY || 'default-base-key-replace-in-production';
+        const userInfo = stats.walletConnection?.address || stats.totalXP.toString();
+        
+        encryptedReflection = await encryptText(reflection, baseKey, userInfo);
+      }
+      
+      // Call API to complete session
+      const response = await fetch('/api/session/complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: stats.totalXP.toString(), // Using totalXP as temporary userId
+          walletAddress: stats.walletConnection?.address,
+          mode,
+          duration,
+          startTime: sessionStartTime?.toISOString(),
+          xpEarned,
+          encryptedReflection: encryptedReflection ? {
+            ciphertext: encryptedReflection.ciphertext,
+            iv: encryptedReflection.iv,
+            salt: encryptedReflection.salt,
+          } : undefined,
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('Session completed successfully:', result);
+        console.log('Reflection CID:', result.reflectionCID);
+        console.log('Reflection Hash:', result.reflectionHash);
+      }
+      
+      // Continue to next state
+      setSessionState('complete');
+    } catch (error) {
+      console.error('Error submitting reflection:', error);
+      // Continue anyway to not block user
+      setSessionState('complete');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [reflection, mode, duration, sessionStartTime, xpGained]);
+
+  const handleSkipReflection = useCallback(() => {
+    setSessionState('complete');
+  }, []);
 
   const handleContinue = useCallback(() => {
     if (newBadges.length > 0) {
@@ -146,7 +215,7 @@ export default function SessionPage() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => setSessionState('active')}
+                  onClick={handleBeginSession}
                   className="w-full py-4 rounded-2xl bg-primary-500 text-white font-semibold text-base sm:text-lg shadow-soft-lg hover:bg-primary-600 transition-colors focus-ring"
                 >
                   Begin Session
@@ -174,6 +243,59 @@ export default function SessionPage() {
                   onComplete={handleComplete}
                   onCancel={handleCancel}
                 />
+              </motion.div>
+            )}
+
+            {sessionState === 'reflection' && (
+              <motion.div
+                key="reflection"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-6"
+              >
+                <div className="text-center">
+                  <h2 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">
+                    Take a Moment to Reflect
+                  </h2>
+                  <p className="text-neutral-600 text-sm sm:text-base">
+                    Share your thoughts about this session (optional)
+                  </p>
+                  <p className="text-xs text-neutral-500 mt-2">
+                    Your reflection will be encrypted and stored securely on IPFS
+                  </p>
+                </div>
+
+                <div>
+                  <textarea
+                    value={reflection}
+                    onChange={(e) => setReflection(e.target.value)}
+                    placeholder="How did this session make you feel? What insights did you gain?"
+                    className="w-full px-4 py-3 rounded-2xl border-2 border-neutral-200 focus:border-primary-500 focus:outline-none resize-none text-neutral-900 placeholder-neutral-400 min-h-[150px]"
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                <div className="flex gap-3 flex-col sm:flex-row">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleSkipReflection}
+                    className="flex-1 py-3 rounded-2xl bg-neutral-200 text-neutral-700 font-semibold text-base sm:text-lg hover:bg-neutral-300 transition-colors focus-ring"
+                    disabled={isSubmitting}
+                  >
+                    Skip
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleSubmitReflection}
+                    className="flex-1 py-3 rounded-2xl bg-primary-500 text-white font-semibold text-base sm:text-lg shadow-soft-lg hover:bg-primary-600 transition-colors focus-ring disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Saving...' : 'Continue'}
+                  </motion.button>
+                </div>
               </motion.div>
             )}
 
