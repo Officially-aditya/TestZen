@@ -73,5 +73,16 @@ export interface NFTStatus {
 export interface WalletConnection {
   connected: boolean;
   address?: string;
+  accountId?: string;
   chainId?: number;
+  network?: string;
+  pairingString?: string;
+}
+
+export interface HashPackConnectionState {
+  accountId: string | null;
+  network: string | null;
+  topic: string | null;
+  pairingString: string | null;
+  connected: boolean;
 }
