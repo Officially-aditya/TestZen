@@ -73,6 +73,7 @@ export default function BadgeUnlocked({ badges, onClose }: BadgeUnlockedProps) {
             <div className="flex items-center gap-4">
               <div
                 className={`w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br ${rarityColors[badge.rarity]} flex items-center justify-center text-2xl sm:text-3xl shadow-soft`}
+                style={badge.color ? { backgroundColor: badge.color + '40' } : {}}
               >
                 {badge.icon}
               </div>
@@ -83,9 +84,19 @@ export default function BadgeUnlocked({ badges, onClose }: BadgeUnlockedProps) {
                 <p className="text-xs sm:text-sm text-neutral-600 line-clamp-2">
                   {badge.description}
                 </p>
-                <p className="text-xs text-neutral-500 mt-1 capitalize">
-                  {badge.rarity}
-                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-neutral-500 capitalize">
+                    {badge.rarity}
+                  </span>
+                  {badge.category && (
+                    <>
+                      <span className="text-xs text-neutral-400">•</span>
+                      <span className="text-xs text-neutral-500 capitalize">
+                        {badge.category}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </motion.div>

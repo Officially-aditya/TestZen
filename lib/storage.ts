@@ -29,6 +29,26 @@ export const getDefaultUserStats = (): UserStats => ({
   },
 });
 
+const migrateBadges = (badges: any[]): any[] => {
+  const badgeIdMap: Record<string, string> = {
+    'first_session': 'first_light',
+    'ten_sessions': 'deep_practice',
+    'hundred_minutes': 'xp_novice',
+    'level_five': 'level_five_sage',
+    'level_ten': 'xp_adept',
+  };
+  
+  return badges.map(badge => {
+    if (badgeIdMap[badge.id]) {
+      return {
+        ...badge,
+        id: badgeIdMap[badge.id],
+      };
+    }
+    return badge;
+  });
+};
+
 export const getUserStats = (): UserStats => {
   if (typeof window === 'undefined') return getDefaultUserStats();
   
@@ -36,7 +56,11 @@ export const getUserStats = (): UserStats => {
   if (!stored) return getDefaultUserStats();
   
   try {
-    return JSON.parse(stored);
+    const stats = JSON.parse(stored);
+    if (stats.badges && Array.isArray(stats.badges)) {
+      stats.badges = migrateBadges(stats.badges);
+    }
+    return stats;
   } catch {
     return getDefaultUserStats();
   }
@@ -86,76 +110,9 @@ export const getXPForNextLevel = (currentLevel: number): number => {
 };
 
 export const checkForNewBadges = (stats: UserStats): Badge[] => {
-  const newBadges: Badge[] = [];
-  const existingBadgeIds = stats.badges.map(b => b.id);
-  
-  const badges: Badge[] = [
-    {
-      id: 'first_session',
-      name: 'First Steps',
-      description: 'Complete your first session',
-      icon: '🌱',
-      rarity: 'common',
-    },
-    {
-      id: 'ten_sessions',
-      name: 'Dedicated',
-      description: 'Complete 10 sessions',
-      icon: '🌿',
-      rarity: 'common',
-    },
-    {
-      id: 'hundred_minutes',
-      name: 'Centurion',
-      description: 'Meditate for 100 minutes',
-      icon: '⏱️',
-      rarity: 'rare',
-    },
-    {
-      id: 'level_five',
-      name: 'Rising Star',
-      description: 'Reach level 5',
-      icon: '⭐',
-      rarity: 'rare',
-    },
-    {
-      id: 'level_ten',
-      name: 'Zen Master',
-      description: 'Reach level 10',
-      icon: '🧘',
-      rarity: 'epic',
-    },
-  ];
-  
-  badges.forEach(badge => {
-    if (existingBadgeIds.includes(badge.id)) return;
-    
-    let earned = false;
-    
-    switch (badge.id) {
-      case 'first_session':
-        earned = stats.sessionsCompleted >= 1;
-        break;
-      case 'ten_sessions':
-        earned = stats.sessionsCompleted >= 10;
-        break;
-      case 'hundred_minutes':
-        earned = stats.totalMinutes >= 100;
-        break;
-      case 'level_five':
-        earned = stats.level >= 5;
-        break;
-      case 'level_ten':
-        earned = stats.level >= 10;
-        break;
-    }
-    
-    if (earned) {
-      newBadges.push({ ...badge, earnedAt: new Date() });
-    }
-  });
-  
-  return newBadges;
+  const sessions = getSessions();
+  const { checkForNewBadges: checkBadges } = require('@/utils/badgeTracker');
+  return checkBadges(stats, sessions);
 };
 
 export const updateGardenTiles = (stats: UserStats): UserStats => {
