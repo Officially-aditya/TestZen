@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       const errorResponse: ErrorResponse = {
         success: false,
         message: 'Invalid request parameters',
-        error: validationResult.error?.errors?.map(e => e.message).join(', '),
+        error: validationResult.error?.issues?.map(e => e.message).join(', '),
       };
       return NextResponse.json(errorResponse, { status: 400 });
     }
@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
     if (hcsTopicId) {
       try {
         const hcsResult = await submitHCSMessage(hcsTopicId, {
-          sessionId: session._id.toString(),
+          sessionId: String(session._id),
           userId: session.userId,
           hederaAccountId,
           mode,
@@ -191,14 +191,14 @@ export async function POST(req: NextRequest) {
 
     // Update garden progression
     let garden = await Garden.findOne({ 
-      userId: user._id.toString(),
+      userId: String(user._id),
     });
 
     if (!garden) {
       // Create garden if it doesn't exist (shouldn't happen)
       const { initializeGarden } = await import('@/utils/garden');
       garden = await Garden.create({
-        userId: user._id.toString(),
+        userId: String(user._id),
         walletAddress: hederaAccountId,
         tiles: initializeGarden(),
         nftMinted: false,
@@ -224,7 +224,7 @@ export async function POST(req: NextRequest) {
     
     const response: CompleteSessionResponse = {
       success: true,
-      sessionId: session._id.toString(),
+      sessionId: String(session._id),
       xpEarned,
       totalXP: user.totalXP,
       level: user.level,
