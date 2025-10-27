@@ -69,3 +69,27 @@ export function getXPProgress(totalXP: number, currentLevel: number): {
     progress,
   };
 }
+
+/**
+ * Update user XP and level after completing a session
+ * Returns the updated totals and whether the user leveled up
+ */
+export function updateUserXP(
+  currentXP: number,
+  currentLevel: number,
+  xpToAdd: number
+): {
+  newTotalXP: number;
+  newLevel: number;
+  leveledUp: boolean;
+} {
+  const newTotalXP = currentXP + xpToAdd;
+  const newLevel = calculateLevel(newTotalXP);
+  const leveledUp = newLevel > currentLevel;
+  
+  return {
+    newTotalXP,
+    newLevel,
+    leveledUp,
+  };
+}

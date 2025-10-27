@@ -1,4 +1,4 @@
-import { calculateXP, calculateLevel, getXPForNextLevel, getXPProgress } from '@/utils/xp';
+import { calculateXP, calculateLevel, getXPForNextLevel, getXPProgress, updateUserXP } from '@/utils/xp';
 
 describe('XP Utilities', () => {
   describe('calculateXP', () => {
@@ -105,6 +105,43 @@ describe('XP Utilities', () => {
     it('should cap progress at 100%', () => {
       const progress = getXPProgress(400, 2); // Reached next level
       expect(progress.progress).toBe(100);
+    });
+  });
+
+  describe('updateUserXP', () => {
+    it('should update XP without leveling up', () => {
+      const result = updateUserXP(50, 1, 30);
+      expect(result.newTotalXP).toBe(80);
+      expect(result.newLevel).toBe(1);
+      expect(result.leveledUp).toBe(false);
+    });
+
+    it('should level up when reaching next level threshold', () => {
+      const result = updateUserXP(90, 1, 20);
+      expect(result.newTotalXP).toBe(110);
+      expect(result.newLevel).toBe(2);
+      expect(result.leveledUp).toBe(true);
+    });
+
+    it('should handle multiple level increases', () => {
+      const result = updateUserXP(50, 1, 1000);
+      expect(result.newTotalXP).toBe(1050);
+      expect(result.newLevel).toBe(4); // level 4 is 900-1599 XP
+      expect(result.leveledUp).toBe(true);
+    });
+
+    it('should handle exact level threshold', () => {
+      const result = updateUserXP(0, 1, 100);
+      expect(result.newTotalXP).toBe(100);
+      expect(result.newLevel).toBe(2);
+      expect(result.leveledUp).toBe(true);
+    });
+
+    it('should handle zero XP addition', () => {
+      const result = updateUserXP(150, 2, 0);
+      expect(result.newTotalXP).toBe(150);
+      expect(result.newLevel).toBe(2);
+      expect(result.leveledUp).toBe(false);
     });
   });
 });
