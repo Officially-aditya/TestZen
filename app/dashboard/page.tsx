@@ -10,6 +10,7 @@ import XPBar from '@/components/garden/XPBar';
 import NFTBadge from '@/components/nft/NFTBadge';
 import WalletConnect from '@/components/WalletConnect';
 import { DashboardSkeleton } from '@/components/LoadingSkeleton';
+import { useWallet } from '@/hooks/useWallet';
 import {
   getUserStats,
   saveUserStats,
@@ -21,6 +22,7 @@ import { UserStats, Session } from '@/types';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { connected } = useWallet();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [recentSessions, setRecentSessions] = useState<Session[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,38 +48,6 @@ export default function DashboardPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  const handleWalletConnect = async () => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const mockAddress = '0x' + Math.random().toString(16).slice(2, 42).padEnd(40, '0');
-    
-    if (stats) {
-      const updatedStats = {
-        ...stats,
-        walletConnection: {
-          connected: true,
-          address: mockAddress,
-          chainId: 1,
-        },
-      };
-      saveUserStats(updatedStats);
-      setStats(updatedStats);
-    }
-  };
-
-  const handleWalletDisconnect = () => {
-    if (stats) {
-      const updatedStats = {
-        ...stats,
-        walletConnection: {
-          connected: false,
-        },
-      };
-      saveUserStats(updatedStats);
-      setStats(updatedStats);
-    }
-  };
 
   const handleMintNFT = async () => {
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -167,11 +137,7 @@ export default function DashboardPage() {
             
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="sm:w-64">
-                <WalletConnect
-                  walletConnection={stats.walletConnection || { connected: false }}
-                  onConnect={handleWalletConnect}
-                  onDisconnect={handleWalletDisconnect}
-                />
+                <WalletConnect />
               </div>
               <motion.button
                 whileHover={{ scale: 1.02 }}
@@ -186,7 +152,7 @@ export default function DashboardPage() {
           </div>
         </motion.header>
 
-        {!stats.walletConnection?.connected && (
+        {!connected && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -196,8 +162,8 @@ export default function DashboardPage() {
               🔗 Connect Your Wallet
             </h3>
             <p className="text-sm text-neutral-700">
-              Connect your wallet to unlock NFT minting and save your achievements on the
-              blockchain. Your progress is currently saved locally.
+              Connect your HashPack wallet to unlock NFT minting and save your achievements on the
+              Hedera blockchain. Your progress is currently saved locally.
             </p>
           </motion.div>
         )}

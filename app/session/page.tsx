@@ -10,6 +10,8 @@ import ReflectionJournal from '@/components/session/ReflectionJournal';
 import XPGainAnimation from '@/components/XPGainAnimation';
 import BadgeUnlocked from '@/components/BadgeUnlocked';
 import Starfield from '@/components/Starfield';
+import WalletConnect from '@/components/WalletConnect';
+import { useWallet } from '@/hooks/useWallet';
 import { Session, Badge } from '@/types';
 import {
   getUserStats,
@@ -22,13 +24,13 @@ import {
   updateNFTStatus,
 } from '@/lib/storage';
 import { encryptText } from '@/lib/encryption';
-import { connectWallet, disconnectWallet, signSessionData } from '@/lib/wallet';
 import { computeHash } from '@/lib/encryption';
 
 type SessionState = 'setup' | 'active' | 'complete' | 'reflection' | 'badges' | 'error';
 
 export default function SessionPage() {
   const router = useRouter();
+  const { connected, accountId, signMessage } = useWallet();
   const [sessionState, setSessionState] = useState<SessionState>('setup');
   const [selectedMode, setSelectedMode] = useState<SessionModeConfig | undefined>();
   const [xpGained, setXpGained] = useState(0);
@@ -38,51 +40,6 @@ export default function SessionPage() {
   const [sessionId, setSessionId] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [walletConnected, setWalletConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string>();
-  const [isConnectingWallet, setIsConnectingWallet] = useState(false);
-
-  // Check wallet connection on mount
-  useEffect(() => {
-    const stats = getUserStats();
-    if (stats.walletConnection?.connected && stats.walletConnection?.address) {
-      setWalletConnected(true);
-      setWalletAddress(stats.walletConnection.address);
-    }
-  }, []);
-
-  const handleConnectWallet = useCallback(async () => {
-    setIsConnectingWallet(true);
-    setError(null);
-    try {
-      const connection = await connectWallet();
-      setWalletConnected(connection.connected);
-      setWalletAddress(connection.address);
-      
-      // Save to storage
-      const stats = getUserStats();
-      saveUserStats({
-        ...stats,
-        walletConnection: connection,
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to connect wallet');
-    } finally {
-      setIsConnectingWallet(false);
-    }
-  }, []);
-
-  const handleDisconnectWallet = useCallback(() => {
-    const connection = disconnectWallet();
-    setWalletConnected(false);
-    setWalletAddress(undefined);
-    
-    const stats = getUserStats();
-    saveUserStats({
-      ...stats,
-      walletConnection: connection,
-    });
-  }, []);
 
   const handleModeSelect = useCallback((mode: SessionModeConfig) => {
     setSelectedMode(mode);
@@ -108,8 +65,8 @@ export default function SessionPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: walletAddress || stats.totalXP.toString(),
-          walletAddress,
+          userId: accountId || stats.totalXP.toString(),
+          walletAddress: accountId,
           mode: selectedMode.id,
           duration: selectedMode.duration,
         }),
@@ -130,7 +87,7 @@ export default function SessionPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedMode, walletAddress]);
+  }, [selectedMode, accountId]);
 
   const handleTimerComplete = useCallback(() => {
     if (!selectedMode) return;
@@ -194,26 +151,32 @@ export default function SessionPage() {
       
       if (reflection.trim()) {
         const baseKey = process.env.NEXT_PUBLIC_ENCRYPTION_BASE_KEY || 'default-base-key-replace-in-production';
-        const userInfo = walletAddress || stats.totalXP.toString();
+        const userInfo = accountId || stats.totalXP.toString();
         
         encryptedReflection = await encryptText(reflection, baseKey, userInfo);
         reflectionHash = await computeHash(encryptedReflection.ciphertext);
       }
+
+      const earnedXP = xpGained;
 
       // Prepare session data for signature
       const sessionData = {
         mode: selectedMode.id,
         duration: selectedMode.duration,
         startTime: sessionStartTime.toISOString(),
-        xpEarned,
+        xpEarned: earnedXP,
         reflectionHash,
       };
 
       // Get wallet signature if wallet is connected
       let signature;
-      if (walletConnected && walletAddress) {
+      if (connected && accountId && signMessage) {
         try {
-          signature = await signSessionData(sessionData, walletAddress);
+          const message = JSON.stringify(sessionData, null, 0);
+          const signatureBytes = await signMessage(message);
+          if (signatureBytes) {
+            signature = Array.from(signatureBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+          }
         } catch (signError) {
           console.error('Signature error:', signError);
           setError('Failed to sign session data. Please try again.');
@@ -229,12 +192,12 @@ export default function SessionPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: walletAddress || stats.totalXP.toString(),
-          walletAddress,
+          userId: accountId || stats.totalXP.toString(),
+          walletAddress: accountId,
           mode: selectedMode.id,
           duration: selectedMode.duration,
           startTime: sessionStartTime.toISOString(),
-          xpEarned,
+          xpEarned: earnedXP,
           signature,
           encryptedReflection: encryptedReflection ? {
             ciphertext: encryptedReflection.ciphertext,
@@ -258,7 +221,7 @@ export default function SessionPage() {
         startTime: sessionStartTime,
         endTime: new Date(),
         completed: true,
-        xpEarned,
+        xpEarned: earnedXP,
         reflectionCID: result.reflectionCID,
         reflectionHash: result.reflectionHash,
       };
@@ -273,7 +236,7 @@ export default function SessionPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedMode, sessionStartTime, xpGained, walletConnected, walletAddress, sessionId]);
+  }, [selectedMode, sessionStartTime, xpGained, connected, accountId, sessionId, signMessage]);
 
   const handleSkipReflection = useCallback(() => {
     setSessionState('complete');
@@ -340,60 +303,11 @@ export default function SessionPage() {
                     Wallet Connection
                   </h3>
                   
-                  {walletConnected && walletAddress ? (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-white border-2 border-success-300"
-                    >
-                      <div className="flex items-center gap-3">
-                        <CheckCircle className="w-5 h-5 text-success-600" />
-                        <div>
-                          <p className="text-xs text-neutral-600">Wallet Connected</p>
-                          <p className="text-sm font-mono font-semibold text-neutral-900">
-                            {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-                          </p>
-                        </div>
-                      </div>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={handleDisconnectWallet}
-                        className="text-xs px-3 py-1 rounded-lg bg-neutral-200 hover:bg-neutral-300 text-neutral-700 font-semibold transition-colors"
-                      >
-                        Disconnect
-                      </motion.button>
-                    </motion.div>
-                  ) : (
-                    <div className="space-y-3">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={handleConnectWallet}
-                        disabled={isConnectingWallet}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary-500 text-white font-semibold hover:bg-primary-600 transition-colors shadow-soft focus-ring disabled:opacity-50"
-                      >
-                        {isConnectingWallet ? (
-                          <>
-                            <motion.div
-                              animate={{ rotate: 360 }}
-                              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                              className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                            />
-                            <span>Connecting...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Wallet className="w-5 h-5" />
-                            <span>Connect Wallet</span>
-                          </>
-                        )}
-                      </motion.button>
-                      <p className="text-xs text-neutral-600 text-center">
-                        Connect your wallet to sign sessions and unlock NFT features (optional for MVP)
-                      </p>
-                    </div>
-                  )}
+                  <WalletConnect />
+                  
+                  <p className="text-xs text-neutral-600 text-center mt-3">
+                    Connect your HashPack wallet to sign sessions and unlock NFT features (optional)
+                  </p>
                 </div>
 
                 {/* Session Instructions */}
