@@ -1,4 +1,6 @@
-// IPFS upload utility using HTTP API directly (Next.js compatible)
+// IPFS and Web3.storage client factory and upload utilities (Next.js compatible)
+
+import { WEB3_STORAGE_CONSTANTS, IPFS_CONSTANTS } from '@/utils/constants';
 
 export interface BadgeMetadata {
   name: string;
@@ -21,6 +23,18 @@ export interface EncryptedReflectionPayload {
   timestamp: string;
   mode: string;
   version: string;
+}
+
+export interface UploadResult {
+  cid: string;
+  url: string;
+  size?: number;
+}
+
+export interface PinStatus {
+  cid: string;
+  pinned: boolean;
+  status?: string;
 }
 
 export async function uploadMetadataToIPFS(
@@ -180,4 +194,128 @@ export async function uploadJSONToWeb3Storage(
     console.error('Error uploading JSON to Web3.storage:', error);
     throw new Error('Failed to upload JSON to Web3.storage');
   }
+}
+
+/**
+ * Web3.storage client factory - returns typed helpers for uploads and pin status
+ */
+export class Web3StorageClient {
+  private token: string;
+
+  constructor(token?: string) {
+    this.token = token || process.env.WEB3_STORAGE_TOKEN || '';
+    if (!this.token) {
+      throw new Error('WEB3_STORAGE_TOKEN not provided');
+    }
+  }
+
+  /**
+   * Upload JSON data to Web3.storage
+   */
+  async uploadJSON(data: Record<string, any>, filename: string = 'data.json'): Promise<UploadResult> {
+    try {
+      const dataJSON = JSON.stringify(data, null, 2);
+      const blob = new Blob([dataJSON], { type: 'application/json' });
+      const file = new File([blob], filename, { type: 'application/json' });
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch(WEB3_STORAGE_CONSTANTS.API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Upload failed: ${response.statusText} - ${errorText}`);
+      }
+      
+      const result = await response.json();
+      const cid = result.cid;
+      
+      return {
+        cid,
+        url: `${WEB3_STORAGE_CONSTANTS.GATEWAY_URL}/${cid}`,
+        size: blob.size,
+      };
+    } catch (error) {
+      console.error('Error uploading JSON:', error);
+      throw new Error(`Failed to upload JSON: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Upload file/blob to Web3.storage
+   */
+  async uploadFile(file: File | Blob, filename?: string): Promise<UploadResult> {
+    try {
+      const fileToUpload = file instanceof File ? file : new File([file], filename || 'file', { type: file.type });
+      
+      const formData = new FormData();
+      formData.append('file', fileToUpload);
+      
+      const response = await fetch(WEB3_STORAGE_CONSTANTS.API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Upload failed: ${response.statusText} - ${errorText}`);
+      }
+      
+      const result = await response.json();
+      const cid = result.cid;
+      
+      return {
+        cid,
+        url: `${WEB3_STORAGE_CONSTANTS.GATEWAY_URL}/${cid}`,
+        size: fileToUpload.size,
+      };
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      throw new Error(`Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get pin status for a CID (stub - Web3.storage auto-pins)
+   */
+  async getPinStatus(cid: string): Promise<PinStatus> {
+    // Web3.storage automatically pins uploaded content
+    // This is a stub for future expansion or compatibility
+    return {
+      cid,
+      pinned: true,
+      status: 'pinned',
+    };
+  }
+
+  /**
+   * Get content URL for a CID
+   */
+  getContentUrl(cid: string): string {
+    return `${WEB3_STORAGE_CONSTANTS.GATEWAY_URL}/${cid}`;
+  }
+}
+
+/**
+ * Factory function to create a Web3.storage client instance
+ */
+export function createWeb3StorageClient(token?: string): Web3StorageClient {
+  return new Web3StorageClient(token);
+}
+
+/**
+ * Get default Web3.storage client (uses env var)
+ */
+export function getWeb3StorageClient(): Web3StorageClient {
+  return createWeb3StorageClient();
 }

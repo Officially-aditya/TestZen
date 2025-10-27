@@ -195,9 +195,12 @@ Users with motion sensitivity can enable "Reduce Motion" in their system prefere
 │   ├── api/
 │   │   ├── garden/
 │   │   │   └── route.ts    # Garden API endpoint
-│   │   └── nft/
-│   │       └── mint/
-│   │           └── route.ts # NFT minting API
+│   │   ├── health/
+│   │   │   └── route.ts    # Health check endpoint
+│   │   ├── nft/
+│   │   │   └── mint/
+│   │   │       └── route.ts # NFT minting API
+│   │   └── session/        # Session management APIs
 │   ├── dashboard/
 │   │   └── page.tsx        # Advanced dashboard page
 │   ├── session/
@@ -223,15 +226,24 @@ Users with motion sensitivity can enable "Reduce Motion" in their system prefere
 │   ├── WalletConnect.tsx   # Wallet connection UI
 │   └── LoadingSkeleton.tsx # Loading states
 ├── lib/
+│   ├── encryption.ts       # Encryption utilities
+│   ├── hedera.ts           # Hedera client & HCS/HTS helpers
+│   ├── ipfs.ts             # Web3.storage client factory
+│   ├── mongodb.ts          # MongoDB cached connection
 │   ├── storage.ts          # LocalStorage utilities
-│   ├── hedera.ts           # Hedera Token Service integration
-│   ├── ipfs.ts             # IPFS metadata upload
-│   └── mongodb.ts          # MongoDB connection
+│   └── wallet.ts           # Wallet connection helpers
 ├── models/
 │   └── Garden.ts           # Garden document schema
+├── utils/
+│   ├── auth.ts             # Authentication utilities
+│   ├── constants.ts        # Shared constants and enums
+│   ├── garden.ts           # Garden calculation helpers
+│   ├── types.ts            # Core TypeScript interfaces
+│   └── xp.ts               # XP calculation helpers
 ├── types/
-│   └── index.ts            # TypeScript type definitions
+│   └── index.ts            # Additional type definitions
 ├── public/                 # Static assets
+├── .env.example            # Environment variables template
 ├── tailwind.config.ts      # Tailwind configuration
 ├── tsconfig.json           # TypeScript configuration
 └── package.json            # Dependencies and scripts
@@ -279,25 +291,82 @@ npm start
 
 ### Environment Variables
 
-For NFT minting functionality, configure the following environment variables:
+Configure the following environment variables for full functionality:
 
 ```bash
 # Copy example file
 cp .env.example .env
 ```
 
-**Required for NFT Minting:**
-- `MONGODB_URI` - MongoDB connection string
-- `HEDERA_NETWORK` - testnet or mainnet
-- `HEDERA_OPERATOR_ID` - Your Hedera account ID
-- `HEDERA_OPERATOR_KEY` - Your Hedera private key
-- `HEDERA_NFT_TOKEN_ID` - NFT token/collection ID
-- `IPFS_HOST` - IPFS host
-- `IPFS_PORT` - IPFS port
-- `IPFS_PROTOCOL` - http or https
-- `IPFS_GATEWAY` - IPFS gateway URL
+#### Required Variables
 
-See [HEDERA_SETUP.md](./HEDERA_SETUP.md) for detailed setup instructions.
+**MongoDB (Database):**
+- `MONGODB_URI` - MongoDB connection string
+  - Get from: [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) or use local MongoDB
+  - Example: `mongodb+srv://username:password@cluster.mongodb.net/testzen`
+
+**Hedera (Blockchain):**
+- `HEDERA_NETWORK` - Network to use (`testnet` or `mainnet`)
+- `HEDERA_OPERATOR_ID` - Your Hedera account ID (format: `0.0.xxxxx`)
+  - Get from: [Hedera Portal](https://portal.hedera.com) (testnet) or [Hedera.com](https://hedera.com) (mainnet)
+- `HEDERA_OPERATOR_KEY` - Your Hedera private key (DER encoded hex string)
+- `HEDERA_NFT_TOKEN_ID` - NFT token/collection ID (format: `0.0.xxxxx`)
+  - Create using: Hedera Token Service (HTS) API
+- `HEDERA_HCS_TOPIC_ID` - Consensus topic ID (format: `0.0.xxxxx`)
+  - Create using: Hedera Consensus Service (HCS) API
+
+**Web3.storage (IPFS):**
+- `WEB3_STORAGE_TOKEN` - API token for Web3.storage
+  - Get from: [https://web3.storage](https://web3.storage)
+  - Used for: Uploading encrypted reflections and NFT metadata to IPFS
+
+**Encryption (Server-side - Keep Secret!):**
+- `ENCRYPTION_BASE_KEY` - Base encryption key (32 bytes base64)
+  - Generate: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`
+- `ENCRYPTION_SALT` - Salt for key derivation (32 bytes base64)
+  - Generate: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`
+- `ENCRYPTION_PEPPER` - Additional encryption security (32 bytes base64)
+  - Generate: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`
+
+**JWT/Authentication (Server-side - Keep Secret!):**
+- `JWT_SECRET` - Secret for signing authentication tokens (64 bytes base64)
+  - Generate: `node -e "console.log(require('crypto').randomBytes(64).toString('base64'))"`
+- `JWT_REFRESH_SECRET` - Secret for refresh tokens (64 bytes base64, different from JWT_SECRET)
+  - Generate: `node -e "console.log(require('crypto').randomBytes(64).toString('base64'))"`
+
+#### Optional Variables
+
+**IPFS (Local Node):**
+- `IPFS_HOST` - IPFS node host (default: `localhost`)
+- `IPFS_PORT` - IPFS node port (default: `5001`)
+- `IPFS_PROTOCOL` - Protocol to use (default: `http`)
+- `IPFS_GATEWAY` - IPFS gateway URL (default: `https://ipfs.io/ipfs`)
+
+**Client-side:**
+- `NEXT_PUBLIC_ENCRYPTION_BASE_KEY` - Client-side encryption base key
+- `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` - WalletConnect project ID
+  - Get from: [https://cloud.walletconnect.com](https://cloud.walletconnect.com)
+- `NEXT_PUBLIC_APP_URL` - Application URL (default: `http://localhost:3000`)
+- `NEXT_PUBLIC_API_URL` - API base URL (default: `http://localhost:3000/api`)
+
+#### Health Check
+
+After setting up environment variables, verify your configuration:
+
+```bash
+# Start the development server
+npm run dev
+
+# Check health status
+curl http://localhost:3000/api/health
+```
+
+The health endpoint will report the status of:
+- MongoDB connection
+- Hedera client configuration
+- Web3.storage token configuration
+
+See [HEDERA_SETUP.md](./HEDERA_SETUP.md) for detailed Hedera setup instructions.
 
 ## Browser Support
 
