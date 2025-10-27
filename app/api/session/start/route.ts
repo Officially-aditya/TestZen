@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       const errorResponse: ErrorResponse = {
         success: false,
         message: 'Invalid request parameters',
-        error: validationResult.error?.errors?.map(e => e.message).join(', '),
+        error: validationResult.error?.issues?.map(e => e.message).join(', '),
       };
       return NextResponse.json(errorResponse, { status: 400 });
     }
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       
       // Create initial garden for new user
       await Garden.create({
-        userId: user._id.toString(),
+        userId: String(user._id),
         walletAddress: hederaAccountId,
         tiles: initializeGarden(),
         nftMinted: false,
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     
     // Create session placeholder
     const session = await SessionModel.create({
-      userId: user._id.toString(),
+      userId: String(user._id),
       hederaAccountId,
       mode,
       duration: targetDuration,
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     // Prepare response
     const response: StartSessionResponse = {
       success: true,
-      sessionId: session._id.toString(),
+      sessionId: String(session._id),
       nonce,
       mode,
       targetDuration,
