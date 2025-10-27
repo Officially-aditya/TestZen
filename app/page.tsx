@@ -9,55 +9,32 @@ import StatsCard from '@/components/StatsCard';
 import GardenVisualization from '@/components/GardenVisualization';
 import BadgeGrid from '@/components/BadgeGrid';
 import { DashboardSkeleton } from '@/components/LoadingSkeleton';
-import { getUserStats } from '@/lib/storage';
-import { UserStats, Badge } from '@/types';
-
-const allBadges: Badge[] = [
-  {
-    id: 'first_session',
-    name: 'First Steps',
-    description: 'Complete your first session',
-    icon: '🌱',
-    rarity: 'common',
-  },
-  {
-    id: 'ten_sessions',
-    name: 'Dedicated',
-    description: 'Complete 10 sessions',
-    icon: '🌿',
-    rarity: 'common',
-  },
-  {
-    id: 'hundred_minutes',
-    name: 'Centurion',
-    description: 'Meditate for 100 minutes',
-    icon: '⏱️',
-    rarity: 'rare',
-  },
-  {
-    id: 'level_five',
-    name: 'Rising Star',
-    description: 'Reach level 5',
-    icon: '⭐',
-    rarity: 'rare',
-  },
-  {
-    id: 'level_ten',
-    name: 'Zen Master',
-    description: 'Reach level 10',
-    icon: '🧘',
-    rarity: 'epic',
-  },
-];
+import { getUserStats, getSessions } from '@/lib/storage';
+import { UserStats } from '@/types';
+import { ALL_BADGES } from '@/lib/badges';
+import { getAllBadgesWithProgress } from '@/utils/badgeTracker';
 
 export default function HomePage() {
   const router = useRouter();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [badgeProgress, setBadgeProgress] = useState<Record<string, { progress: number; total: number }>>({});
 
   useEffect(() => {
     const loadStats = () => {
       const userStats = getUserStats();
+      const sessions = getSessions();
+      
+      const badgesWithProgress = getAllBadgesWithProgress(userStats, sessions);
+      const progressMap: Record<string, { progress: number; total: number }> = {};
+      badgesWithProgress.forEach(bp => {
+        progressMap[bp.badge.id] = {
+          progress: bp.progress,
+          total: bp.total,
+        };
+      });
+      
+      setBadgeProgress(progressMap);
       setStats(userStats);
       setIsLoading(false);
     };
@@ -160,7 +137,13 @@ export default function HomePage() {
 
           <section aria-labelledby="badges-heading">
             <h2 id="badges-heading" className="sr-only">Badges Collection</h2>
-            <BadgeGrid badges={allBadges} earnedBadges={stats.badges} />
+            <BadgeGrid
+              badges={ALL_BADGES}
+              earnedBadges={stats.badges}
+              limit={8}
+              showAllButton={true}
+              progress={badgeProgress}
+            />
           </section>
 
           {stats.sessionsCompleted === 0 && (

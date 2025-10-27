@@ -1,82 +1,115 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Badge } from '@/types';
-import { Lock } from 'lucide-react';
+import BadgeCard from '@/components/badges/BadgeCard';
+import BadgeDetailModal from '@/components/badges/BadgeDetailModal';
+import { ArrowRight } from 'lucide-react';
 
 interface BadgeGridProps {
   badges: Badge[];
   earnedBadges: Badge[];
+  limit?: number;
+  showAllButton?: boolean;
+  progress?: Record<string, { progress: number; total: number }>;
 }
 
-const rarityColors = {
-  common: 'from-neutral-400 to-neutral-600',
-  rare: 'from-primary-400 to-primary-600',
-  epic: 'from-purple-400 to-purple-600',
-  legendary: 'from-amber-400 to-amber-600',
-};
+export default function BadgeGrid({
+  badges,
+  earnedBadges,
+  limit,
+  showAllButton = false,
+  progress = {},
+}: BadgeGridProps) {
+  const router = useRouter();
+  const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-export default function BadgeGrid({ badges, earnedBadges }: BadgeGridProps) {
   const earnedIds = new Set(earnedBadges.map(b => b.id));
 
+  const sortedBadges = [...badges].sort((a, b) => {
+    const aEarned = earnedIds.has(a.id);
+    const bEarned = earnedIds.has(b.id);
+    if (aEarned && !bEarned) return -1;
+    if (!aEarned && bEarned) return 1;
+    return a.order - b.order;
+  });
+
+  const displayedBadges = limit ? sortedBadges.slice(0, limit) : sortedBadges;
+  const earnedCount = earnedBadges.length;
+  const totalCount = badges.length;
+
+  const handleBadgeClick = (badge: Badge) => {
+    setSelectedBadge(badge);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setTimeout(() => setSelectedBadge(null), 300);
+  };
+
   return (
-    <motion.div
-      initial={{ y: 20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      className="p-6 sm:p-8 rounded-2xl bg-white border-2 border-neutral-200 shadow-soft"
-    >
-      <h3 className="text-lg sm:text-xl font-semibold text-neutral-900 mb-4">
-        Badges Collection
-      </h3>
+    <>
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="p-6 sm:p-8 rounded-2xl bg-white border-2 border-neutral-200 shadow-soft"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg sm:text-xl font-semibold text-neutral-900">
+            Badges Collection
+          </h3>
+          <span className="text-sm font-semibold text-neutral-600">
+            {earnedCount}/{totalCount}
+          </span>
+        </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-        {badges.map((badge, index) => {
-          const isEarned = earnedIds.has(badge.id);
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          {displayedBadges.map((badge, index) => {
+            const isEarned = earnedIds.has(badge.id);
+            const badgeProgress = progress[badge.id];
 
-          return (
-            <motion.div
-              key={badge.id}
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: index * 0.05 }}
-              className={`
-                p-3 sm:p-4 rounded-2xl border-2 transition-all
-                ${isEarned
-                  ? 'border-neutral-200 bg-white shadow-soft hover:shadow-soft-lg'
-                  : 'border-neutral-200 bg-neutral-50 opacity-60'
-                }
-              `}
-            >
-              <div className="flex flex-col items-center text-center space-y-2">
-                <div
-                  className={`
-                    w-12 h-12 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center text-2xl sm:text-3xl shadow-soft
-                    ${isEarned
-                      ? `bg-gradient-to-br ${rarityColors[badge.rarity]}`
-                      : 'bg-neutral-200'
-                    }
-                  `}
-                >
-                  {isEarned ? badge.icon : <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-400" />}
-                </div>
-                <div className="w-full">
-                  <p className="font-semibold text-xs sm:text-sm text-neutral-900 truncate">
-                    {badge.name}
-                  </p>
-                  <p className="text-xs text-neutral-600 line-clamp-2 mt-1">
-                    {badge.description}
-                  </p>
-                  {isEarned && (
-                    <p className="text-xs text-neutral-500 mt-1 capitalize">
-                      {badge.rarity}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-    </motion.div>
+            return (
+              <BadgeCard
+                key={badge.id}
+                badge={badge}
+                isEarned={isEarned}
+                progress={badgeProgress?.progress}
+                total={badgeProgress?.total}
+                onClick={() => handleBadgeClick(badge)}
+                delay={index * 0.05}
+              />
+            );
+          })}
+        </div>
+
+        {showAllButton && limit && badges.length > limit && (
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => router.push('/badges')}
+            className="mt-6 w-full flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-primary-500 text-white font-semibold shadow-soft-lg hover:bg-primary-600 transition-colors focus-ring"
+          >
+            <span>Show All Badges</span>
+            <ArrowRight className="w-5 h-5" />
+          </motion.button>
+        )}
+      </motion.div>
+
+      <BadgeDetailModal
+        badge={selectedBadge}
+        isEarned={selectedBadge ? earnedIds.has(selectedBadge.id) : false}
+        progress={selectedBadge ? progress[selectedBadge.id]?.progress : 0}
+        total={selectedBadge ? progress[selectedBadge.id]?.total : 1}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
+    </>
   );
 }

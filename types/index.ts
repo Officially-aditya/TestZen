@@ -10,7 +10,7 @@ export interface Session {
   reflectionHash?: string;
 }
 
-export type SessionMode = 'meditation' | 'focus' | 'breathwork';
+export type SessionMode = 'meditation' | 'focus' | 'breathwork' | 'calm' | 'gratitude';
 
 export interface UserStats {
   totalXP: number;
@@ -30,6 +30,28 @@ export interface Badge {
   icon: string;
   earnedAt?: Date;
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  category: 'foundation' | 'mode' | 'time' | 'milestone' | 'special';
+  color: string;
+  requirement: {
+    type: string;
+    count?: number;
+    mode?: string;
+    modes?: string[];
+    timeOfDay?: 'morning' | 'evening';
+    dayType?: 'weekend' | 'weekday';
+    xpAmount?: number;
+    level?: number;
+    wordCount?: number;
+  };
+  order: number;
+}
+
+export interface UserBadge {
+  userId?: string;
+  badgeId: string;
+  earnedAt: Date;
+  isNew: boolean;
+  progress?: number;
 }
 
 export interface GardenState {
