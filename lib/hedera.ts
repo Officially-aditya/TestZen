@@ -176,9 +176,11 @@ export async function associateToken(
 export interface HCSMessageData {
   sessionId: string;
   userId: string;
+  hederaAccountId?: string;
   mode: string;
   duration: number;
   xpEarned: number;
+  nonce?: string;
   reflectionHash?: string;
   reflectionCID?: string;
   timestamp: string;

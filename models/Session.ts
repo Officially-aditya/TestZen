@@ -10,13 +10,19 @@ export interface IEncryptedReflection {
 
 export interface ISession extends Document {
   userId: string;
+  hederaAccountId: string;
   walletAddress?: string;
   mode: string; // 'meditation' | 'focus' | 'breathwork'
   duration: number; // in minutes
   startTime: Date;
-  endTime: Date;
+  endTime?: Date;
   completed: boolean;
   xpEarned: number;
+  nonce: string; // For replay attack prevention
+  hcsTopicId?: string;
+  hcsSequenceNumber?: number;
+  hcsConsensusTimestamp?: Date;
+  signedProof?: string; // Signed proof payload
   encryptedReflection?: IEncryptedReflection;
   createdAt: Date;
   updatedAt: Date;
@@ -33,13 +39,19 @@ const EncryptedReflectionSchema = new Schema({
 const SessionSchema = new Schema<ISession>(
   {
     userId: { type: String, required: true, index: true },
+    hederaAccountId: { type: String, required: true, index: true },
     walletAddress: { type: String, index: true },
-    mode: { type: String, required: true, enum: ['meditation', 'focus', 'breathwork'] },
+    mode: { type: String, required: true, enum: ['meditation', 'focus', 'breathwork', 'calm', 'gratitude'] },
     duration: { type: Number, required: true },
     startTime: { type: Date, required: true },
-    endTime: { type: Date, required: true },
+    endTime: { type: Date },
     completed: { type: Boolean, default: false },
-    xpEarned: { type: Number, required: true },
+    xpEarned: { type: Number, default: 0 },
+    nonce: { type: String, required: true, unique: true },
+    hcsTopicId: { type: String },
+    hcsSequenceNumber: { type: Number },
+    hcsConsensusTimestamp: { type: Date },
+    signedProof: { type: String },
     encryptedReflection: { type: EncryptedReflectionSchema },
   },
   {
